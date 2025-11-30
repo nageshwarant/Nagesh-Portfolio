@@ -1,58 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financial Data</title>
-  <style>
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      font-family: Arial, sans-serif;
-    }
-    th, td {
-      border: 1px solid #333;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Modern Finance Dashboard — Assets & Liabilities</title>
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  /* small helpers */
+  .kpi { min-width: 170px; }
+  .neg { color: #c92a2a; font-weight: 700; }
+  .pos { color: #0f9d58; font-weight: 700; }
+  /* subtle scrollbar for table */
+  .table-scroll::-webkit-scrollbar { height: 8px; }
+  .table-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 8px; }
+</style>
 </head>
-<body>
+<body class="bg-slate-50 min-h-screen text-slate-800">
 
-<h1>Hello World</h1>
+<div class="flex min-h-screen">
 
-<table>
-  <tr>
-    <th>Type</th>
-    <th>Category</th>
-    <th>Month</th>
-    <th>Amount</th>
-  </tr>
+  <!-- Sidebar -->
+  <aside class="w-72 bg-white border-r hidden md:block">
+    <div class="p-6 border-b">
+      <h1 class="text-2xl font-extrabold">FinSight</h1>
+      <p class="text-sm text-slate-500 mt-1">Assets & Liabilities</p>
+    </div>
+    <nav class="p-4 space-y-1">
+      <button class="w-full text-left px-4 py-2 rounded-md bg-slate-100 text-slate-800 font-medium">Overview</button>
+      <button class="w-full text-left px-4 py-2 rounded-md hover:bg-slate-50">Transactions</button>
+      <button class="w-full text-left px-4 py-2 rounded-md hover:bg-slate-50">Reports</button>
+      <button class="w-full text-left px-4 py-2 rounded-md hover:bg-slate-50">Settings</button>
+    </nav>
+  </aside>
 
-  <tr><td>FD</td><td>A</td><td>02-10-2025</td><td>10,00,000</td></tr>
-  <tr><td>A/C</td><td>A</td><td>02-10-2025</td><td>7,591</td></tr>
-  <tr><td>Demat</td><td>A</td><td>02-10-2025</td><td>9,32,512</td></tr>
-  <tr><td>MF</td><td>A</td><td>02-10-2025</td><td>2,25,583</td></tr>
-  <tr><td>PF</td><td>A</td><td>02-10-2025</td><td>5,35,665</td></tr>
-  <tr><td>OD</td><td>L</td><td>02-10-2025</td><td>-1,79,086</td></tr>
-  <tr><td>PL</td><td>L</td><td>02-10-2025</td><td>-13,58,564</td></tr>
-  <tr><td>HL</td><td>L</td><td>02-10-2025</td><td>-7,19,013</td></tr>
+  <!-- Main -->
+  <div class="flex-1 p-6">
 
-  <tr><td>FD</td><td>A</td><td>06-11-2025</td><td>10,00,000</td></tr>
-  <tr><td>A/C</td><td>A</td><td>06-11-2025</td><td>6,546</td></tr>
-  <tr><td>Demat</td><td>A</td><td>06-11-2025</td><td>8,03,692</td></tr>
-  <tr><td>MF</td><td>A</td><td>06-11-2025</td><td>2,50,795</td></tr>
-  <tr><td>PF</td><td>A</td><td>06-11-2025</td><td>5,35,665</td></tr>
-  <tr><td>OD</td><td>L</td><td>06-11-2025</td><td>-8,940</td></tr>
-  <tr><td>PL</td><td>L</td><td>06-11-2025</td><td>-13,24,237</td></tr>
-  <tr><td>HL</td><td>L</td><td>06-11-2025</td><td>-7,14,516</td></tr>
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div>
+        <h2 class="text-2xl font-bold">Dashboard</h2>
+        <div class="text-sm text-slate-500 mt-1">Portfolio overview and quick insights</div>
+      </div>
 
-</table>
+      <div class="flex items-center gap-3">
+        <button id="loadSample" class="px-3 py-2 bg-indigo-600 text-white rounded-md">Load Sample</button>
+        <button id="exportBtn" class="px-3 py-2 bg-emerald-600 text-white rounded-md">Export CSV</button>
+      </div>
+    </header>
 
+    <!-- KPIs -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="kpi bg-white p-4 rounded-lg shadow flex flex-col">
+        <div class="text-sm text-slate-500">Total Assets (Nov'25)</div>
+        <div id="kpiAssets" class="text-2xl font-bold pos mt-2">₹ 0</div>
+        <div class="text-xs text-slate-400 mt-2">Sum of positive balances</div>
+      </div>
+
+      <div class="kpi bg-white p-4 rounded-lg shadow flex flex-col">
+        <div class="text-sm text-slate-500">Total Liabilities (Nov'25)</div>
+        <div id="kpiLiabilities" class="text-2xl font-bold neg mt-2">₹ 0</div>
+        <div class="text-xs text-slate-400 mt-2">Sum of negative balances</div>
+      </div>
+
+      <div class="kpi bg-white p-4 rounded-lg shadow flex flex-col">
+        <div class="text-sm text-slate-500">Net Worth</div>
+        <div id="kpiNet" class="text-2xl font-bold mt-2">₹ 0</div>
+        <div id="kpiDelta" class="text-xs text-slate-400 mt-2"></div>
+      </div>
+
+      <div class="kpi bg-white p-4 rounded-lg shadow flex flex-col">
+        <div class="text-sm text-slate-500">Monthly Savings (Nov)</div>
+        <div id="kpiSavings" class="text-2xl font-bold pos mt-2">₹ 0</div>
+        <div class="text-xs text-slate-400 mt-2">Assets - (Absolute) Liabilities</div>
+      </div>
+    </section>
+
+    <!-- Grid: Left summary & charts, Right analysis pane -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left column: Summary matrix + charts -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Summary + comparison -->
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex items-start justify-between">
+            <h3 class="font-semibold">Summary Matrix</h3>
+            <div class="text-sm text-slate-500">Compare Oct'25 vs Nov'25</div>
+          </div>
+
+          <div class="mt-4 overflow-auto table-scroll">
+            <table class="min-w-full text-sm text-center border">
+              <thead class="bg-slate-800 text-white">
+                <tr>
+                  <th class="p-2 border">Category</th>
+                  <th class="p-2 border">Type</th>
+                  <th class="p-2 border">Oct'25</th>
+                  <th class="p-2 border">Nov'25</th>
+                </tr>
+              </thead>
+              <tbody id="summaryMatrix" class="text-sm"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Charts: comparison horizontal + stacked trend -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+            <h4 class="font-medium mb-3">Category Comparison (Oct vs Nov)</h4>
+            <div class="flex-1">
+              <canvas id="hbarChart" class="w-full h-64 md:h-80"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+            <h4 class="font-medium mb-3">Assets vs Liabilities — Trend</h4>
+            <div class="flex-1">
+              <canvas id="stackChart" class="w-full h-64 md:h-80"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Pie distribution -->
+        <div class="bg-white rounded-lg shadow p-4">
+          <h4 class="font-medium mb-3">Distribution of Assets (Nov'25)</h4>
+          <div class="md:flex md:items-center md:gap-6">
+            <div class="md:w-1/2">
+              <canvas id="pieAssets" class="w-full h-64 md:h-64"></canvas>
+            </div>
+            <div class="md:w-1/2 mt-4 md:mt-0 text-sm text-slate-700">
+              <div id="pieLegend"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right column: Insights & Recommendations -->
+      <aside class="space-y-6">
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <h4 class="font-semibold">Automated Insights</h4>
+          <div id="insights" class="mt-3 text-sm text-slate-700 space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <h4 class="font-semibold">Top Contributors</h4>
+          <div id="topContributors" class="mt-3 text-sm"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <h4 class="font-semibold">Quick Actions</h4>
+          <div class="mt-3 flex flex-col gap-2">
+            <button id="exportCSV" class="px-3 py-2 bg-sky-600 text-white rounded">Export Current View (CSV)</button>
+            <button id="downloadReport" class="px-3 py-2 bg-emerald-600 text-white rounded">Download Summary (CSV)</button>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+const sample = [
+  { Category: 'FD', Type: 'A', Oct: 1000000, Nov: 1000000 },
+  { Category: 'Demat', Type: 'A', Oct: 932512, Nov: 803692 },
+  { Category: 'PF', Type: 'A', Oct: 535665, Nov: 535665 },
+  { Category: 'MF', Type: 'A', Oct: 225583, Nov: 250795 },
+  { Category: 'A/C', Type: 'A', Oct: 7591, Nov: 6546 },
+  { Category: 'OD', Type: 'L', Oct: -179086, Nov: -8940 },
+  { Category: 'PL', Type: 'L', Oct: -1358564, Nov: -1324237 },
+  { Category: 'HL', Type: 'L', Oct: -719013, Nov: -714516 }
+];
+
+let hbarChart = null, stackChart = null, pieChart = null;
+
+document.getElementById('loadSample').addEventListener('click', ()=> initDashboard(sample));
+initDashboard(sample);
+
+function formatINR(n){
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹ ' + Math.abs(n).toLocaleString();
+}
+
+function initDashboard(data){
+  const tbody = document.getElementById('summaryMatrix');
+  tbody.innerHTML = '';
+  data.forEach(r=>{
+    const octClass = r.Oct < 0 ? 'neg' : 'pos';
+    const novClass = r.Nov < 0 ? 'neg' : 'pos';
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr class="border-b">
+        <td class="p-2 text-left font-medium">${r.Category}</td>
+        <td class="p-2">${r.Type}</td>
+        <td class="p-2 ${octClass}">${r.Oct.toLocaleString()}</td>
+        <td class="p-2 ${novClass}">${r.Nov.toLocaleString()}</td>
+      </tr>
+    `);
+  });
+
+  const assets = data.filter(x=>x.Nov>0).reduce((s,x)=>s + x.Nov, 0);
+  const liabilities = data.filter(x=>x.Nov<0).reduce((s,x)=>s + x.Nov, 0);
+  const net = assets + liabilities;
+  const assetsOct = data.filter(x=>x.Oct>0).reduce((s,x)=>s + x.Oct, 0);
+  const liabOct = data.filter(x=>x.Oct<0).reduce((s,x)=>s + x.Oct, 0);
+  const netOct = assetsOct + liabOct;
+  const savings = assets - Math.abs(liabilities);
+
+  document.getElementById('kpiAssets').innerText = formatINR(assets);
+  document.getElementById('kpiLiabilities').innerText = formatINR(liabilities);
+  document.getElementById('kpiNet').innerText = formatINR(net);
+  const delta = net - netOct;
+  document.getElementById('kpiDelta').innerText = `MoM Net change: ${delta>=0?'+':'-'} ${formatINR(Math.abs(delta))}`;
+  document.getElementById('kpiSavings').innerText = formatINR(savings);
+
+  const labels = data.map(d=>d.Category);
+  const octData = data.map(d=>d.Oct);
+  const novData = data.map(d=>d.Nov);
+
+  if(hbarChart) hbarChart.destroy();
+  hbarChart = new Chart(document.getElementById('hbarChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: "Oct'25", data: octData, stack: 's1' },
+        { label: "Nov'25", data: novData, stack: 's1' }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { ticks: { callback: (v)=> v } } },
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+
+  const months = ["Oct'25","Nov'25"];
+  const assetsByMonth = [
+    data.filter(x=>x.Oct>0).reduce((s,x)=>s + x.Oct, 0),
+    data.filter(x=>x.Nov>0).reduce((s,x)=>s + x.Nov, 0)
+  ];
+  const liabilitiesByMonth = [
+    Math.abs(data.filter(x=>x.Oct<0).reduce((s,x)=>s + x.Oct, 0)),
+    Math.abs(data.filter(x=>x.Nov<0).reduce((s,x)=>s + x.Nov, 0))
+  ];
+
+  if(stackChart) stackChart.destroy();
+  stackChart = new Chart(document.getElementById('stackChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Assets', data: assetsByMonth, fill: true, tension: 0.4 },
+        { label: 'Liabilities (abs)', data: liabilitiesByMonth, fill: true, tension: 0.4 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false }
+  });
+
+  const assetSlices = data.filter(x=>x.Nov>0);
+  const pieLabels = assetSlices.map(x=>x.Category);
+  const pieData = assetSlices.map(x=>x.Nov);
+
+  if(pieChart) pieChart.destroy();
+  pieChart = new Chart(document.getElementById('pieAssets'), {
+    type: 'pie',
+    data: { labels: pieLabels, datasets: [{ data: pieData }] },
+    options: { responsive:true, maintainAspectRatio:false }
+  });
+
+  const legendEl = document.getElementById('pieLegend');
+  legendEl.innerHTML = pieLabels.map((l,i)=>`<div class="flex items-center gap-2 mb-1"><div style="width:12px;height:12px;background:var(--c${i});border-radius:3px"></div><div>${l}: ${formatINR(pieData[i])}</div></div>`).join('');
+
+  generateInsights(data);
+  renderTopContributors(data);
+
+  document.getElementById('exportCSV').onclick = () => exportCSV(data);
+  document.getElementById('downloadReport').onclick = () => exportSummaryCSV(data);
+  document.getElementById('exportBtn').onclick = () => exportSummaryCSV(data);
+}
+
+// Insights & Top Contributors code remains unchanged
+function generateInsights(data){
+  const insights = [];
+  const topAsset = data.filter(x=>x.Nov>0).sort((a,b)=>b.Nov - a.Nov)[0];
+  if(topAsset) insights.push(`Top asset contributor in Nov'25: ${topAsset.Category} (${formatINR(topAsset.Nov)})`);
+  const largestLiab = data.filter(x=>x.Nov<0).sort((a,b)=>a.Nov - b.Nov)[0];
+  if(largestLiab) insights.push(`Largest liability in Nov'25: ${largestLiab.Category} (${formatINR(largestLiab.Nov)})`);
+  const netOct = data.reduce((s,x)=>s + x.Oct, 0);
+  const netNov = data.reduce((s,x)=>s + x.Nov, 0);
+  const mom = netNov - netOct;
+  const momPct = netOct ? (mom / Math.abs(netOct) * 100) : 0;
+  insights.push(`MoM Net change: ${formatINR(mom)} (${momPct.toFixed(2)}%)`);
+  const assetsNov = data.filter(x=>x.Nov>0).reduce((s,x)=>s + x.Nov,0);
+  const liabilitiesNov = Math.abs(data.filter(x=>x.Nov<0).reduce((s,x)=>s + x.Nov,0));
+  const savings = assetsNov - liabilitiesNov;
+  const savingsRate = assetsNov ? (savings / assetsNov * 100) : 0;
+  insights.push(`Estimated savings (assets - liabilities): ${formatINR(savings)} (${savingsRate.toFixed(2)}% of assets)`);
+  const biggestChange = data.map(x => ({cat:x.Category, diff: x.Nov - x.Oct}))
+                           .sort((a,b)=>Math.abs(b.diff) - Math.abs(a.diff))[0];
+  if(biggestChange){
+    const verb = biggestChange.diff > 0 ? 'increased' : 'decreased';
+    insights.push(`${biggestChange.cat} ${verb} by ${formatINR(biggestChange.diff)} vs Oct'25.`);
+  }
+  document.getElementById('insights').innerHTML = insights.map(s => `<div>• ${s}</div>`).join('');
+}
+
+function renderTopContributors(data){
+  const el = document.getElementById('topContributors');
+  const combined = data.map(x => ({cat:x.Category, amount: x.Nov}));
+  const sortedPos = combined.filter(x=>x.amount>0).sort((a,b)=>b.amount - a.amount).slice(0,4);
+  const sortedNeg = combined.filter(x=>x.amount<0).sort((a,b)=>a.amount - b.amount).slice(0,4);
+  el.innerHTML = `
+    <div class="text-sm"><strong>Top Assets (Nov):</strong></div>
+    <ul class="list-disc ml-5 mb-3">${sortedPos.map(s=>`<li>${s.cat}: ${formatINR(s.amount)}</li>`).join('')}</ul>
+    <div class="text-sm"><strong>Top Liabilities (Nov):</strong></div>
+    <ul class="list-disc ml-5">${sortedNeg.map(s=>`<li>${s.cat}: ${formatINR(s.amount)}</li>`).join('')}</ul>
+  `;
+}
+
+// CSV helpers unchanged
+function toCSV(rows){ const head = Object.keys(rows[0] || {}); const csv = [head.join(',')].concat(rows.map(r=> head.map(h => { const v = r[h]; if(typeof v==='string' && v.includes(',')) return `"${v.replace(/"/g,'""')}"`; return v; }).join(','))); return csv.join('\n'); }
+function exportCSV(data){ const rows = data.map(r => ({ Category: r.Category, Type: r.Type, Oct: r.Oct, Nov: r.Nov })); const csv = toCSV(rows); const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'assets_liabilities_view.csv'; a.click(); URL.revokeObjectURL(url); }
+function exportSummaryCSV(data){ const totals = [ { Metric: "Total Assets (Nov)", Value: data.filter(x=>x.Nov>0).reduce((s,o)=>s+o.Nov,0) }, { Metric: "Total Liabilities (Nov)", Value: data.filter(x=>x.Nov<0).reduce((s,o)=>s+o.Nov,0) }, { Metric: "Net Worth (Nov)", Value: data.reduce((s,o)=>s+o.Nov,0) } ]; const csv = toCSV(totals); const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'summary.csv'; a.click(); URL.revokeObjectURL(url); }
+</script>
 </body>
 </html>
